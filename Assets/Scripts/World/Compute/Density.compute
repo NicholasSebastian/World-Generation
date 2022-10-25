@@ -1,0 +1,72 @@
+#pragma kernel GenerateDensity
+#pragma kernel ModifyTerrain
+#pragma kernel FormatVertices
+#include "/Noise.cginc"
+
+// Written by Nicholas Sebastian Hendrata on 14/09/2022.
+
+int width;
+int breadth;
+float scale;
+
+// GENERATE DENSITY
+
+float3 offset;
+
+RWStructuredBuffer<float> density;
+
+[numthreads(8, 8, 8)]
+void GenerateDensity (uint3 id : SV_DispatchThreadID)
+{
+    int index = (id.z * width * breadth) + (id.y * width) + id.x;
+
+    float3 position = float3(id / scale);
+    float3 _offset = offset / scale;
+
+    density[index] = snoise(position + _offset);
+}
+
+// APPLY TERRAIN BIAS
+
+int heightScale;
+int terrainOffset;
+float squashingFactor;
+
+StructuredBuffer<float> heightMap;
+
+[numthreads(8, 8, 8)]
+void ModifyTerrain (uint3 id : SV_DispatchThreadID)
+{
+    int index = (id.z * width * breadth) + (id.y * width) + id.x;
+    int horizontalIndex = (id.y * width) + id.x;
+
+    float terrainValue = heightMap[horizontalIndex];
+    int terrainHeight = floor((terrainValue * heightScale) + terrainOffset);
+    float bias = (id.y - terrainHeight) * squashingFactor;
+
+    density[index] = saturate(density[index] - bias);
+}
+
+// CONSTRUCT MARCHING CUBES VERTICES AND INDICES FROM DENSITY
+
+RWStructuredBuffer<float3> vertices;
+RWStructuredBuffer<float> indices;
+
+[numthreads(1, 1, 1)]
+void FormatVertices (uint3 id : SV_DispatchThreadID)
+{
+    int index = (id.z * width * breadth) + (id.y * width) + id.x;
+    int index2 = index + 1;
+    int index3 = index + width;
+    int index4 = index + width + 1;
+    int index5 = index + (width * breadth);
+    int index6 = index5 + 1;
+    int index7 = index5 + width;
+    int index8 = index5 + width + 1;
+
+    // TODO: use a lookup table to check for the vertices.
+    // TODO: interpolate the vertices between the values.
+    // TODO: set indices for these vertices.
+
+    output[index] = density[index];
+}

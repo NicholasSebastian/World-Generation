@@ -1,0 +1,19 @@
+#pragma kernel GenerateTexture
+
+// Written by Nicholas Sebastian Hendrata on 08/10/2022.
+
+int width;
+
+StructuredBuffer<float> Values;
+RWTexture2D<float4> Result;
+
+[numthreads(8, 8, 1)]
+void GenerateTexture (uint3 id : SV_DispatchThreadID)
+{
+    float4 black = float4(0, 0, 0, 0.0);
+    float4 white = float4(1, 1, 1, 0.0);
+
+    int index = (id.y * width) + id.x;
+
+    Result[id.xy] = lerp(black, white, Values[index]);
+}

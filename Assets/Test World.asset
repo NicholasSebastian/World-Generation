@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5fd17b81a5ba476995618db5ba6c646, type: 3}
+  m_Name: Test World
+  m_EditorClassIdentifier: 
+  width: 256
+  breadth: 256
+  height: 256
+  noiseMapSettings:
+  - name: Continentalness
+    samplingSettings:
+      scale: 30
+      octaves: 4
+      persistance: 0.5
+      lacunarity: 2
+    splineSettings:
+      splinePoints:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 0
+          inSlope: 1
+          outSlope: 1
+          tangentMode: 34
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        - serializedVersion: 3
+          time: 1
+          value: 1
+          inSlope: 1
+          outSlope: 1
+          tangentMode: 34
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 0
+      from: 0
+      to: 1
+  - name: Erosion
+    samplingSettings:
+      scale: 10
+      octaves: 6
+      persistance: 0.4
+      lacunarity: 2.2
+    splineSettings:
+      splinePoints:
+        serializedVersion: 2
+        m_Curve:
+        - serializedVersion: 3
+          time: 0
+          value: 1
+          inSlope: -1
+          outSlope: -1
+          tangentMode: 34
+          weightedMode: 0
+          inWeight: 0
+          outWeight: 0.33333334
+        - serializedVersion: 3
+          time: 1
+          value: 0
+          inSlope: -1
+          outSlope: -1
+          tangentMode: 34
+          weightedMode: 0
+          inWeight: 0.33333334
+          outWeight: 0
+        m_PreInfinity: 2
+        m_PostInfinity: 2
+        m_RotationOrder: 0
+      from: 0.6
+      to: 1
+  noiseScale: 10
+  heightScale: 30
+  terrainHeight: 128
+  squashingFactor: 0.1
+  colourSettings:
+  - name: Grass
+    height: 0
+    colour: {r: 0.11031505, g: 0.6320754, b: 0.25029892, a: 0}
+    blend: 0

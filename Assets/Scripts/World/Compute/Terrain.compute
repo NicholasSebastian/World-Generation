@@ -1,0 +1,137 @@
+#pragma kernel GenerateMaps
+#pragma kernel Normalize
+#pragma kernel CombineMaps
+#include "/Noise.cginc"
+
+// Written by Nicholas Sebastian Hendrata on 14/09/2022.
+
+int width;
+int breadth;
+int mapCount;
+
+// GENERATE NOISE MAPS
+
+struct OctaveSettings
+{
+    float scale;
+    int octaves;
+    float persistance;
+    float lacunarity;
+};
+
+float2 offset;
+
+StructuredBuffer<OctaveSettings> octaveSettings;
+RWStructuredBuffer<float> Maps;
+
+[numthreads(8, 8, 1)]
+void GenerateMaps (uint3 id : SV_DispatchThreadID)
+{
+    int nvIndex = (id.y * width) + id.x;
+
+    for (int mapIndex = 0; mapIndex < mapCount; mapIndex++)
+    {
+        int indexOffset = mapIndex * width * breadth;
+
+        int octaves = octaveSettings[mapIndex].octaves;
+        int x = id.x / octaves;
+        int y = id.y / octaves;
+        
+        float value = 0;
+        for (int ovIndex = 0; ovIndex < octaves; ovIndex++)
+        {
+            float scale = octaveSettings[mapIndex].scale;
+            float persistance = abs(octaveSettings[mapIndex].persistance);
+            float lacunarity = abs(octaveSettings[mapIndex].lacunarity);
+
+            float amplitude = pow(persistance, ovIndex);
+            float frequency = pow(lacunarity, ovIndex);
+
+            float sampleX = x / scale * frequency;
+            float sampleY = y / scale * frequency;
+            float2 _offset = offset / scale * frequency;
+
+            float2 position = float2(sampleX, sampleY) + _offset;
+            float octaveValue = snoise(position) * amplitude;
+
+            value += octaveValue;
+        }
+
+        Maps[nvIndex + indexOffset] = value;
+    }
+}
+
+// NORMALIZE VALUES
+
+StructuredBuffer<float> minMaxValues;
+
+float unlerp(float from, float to, float value)
+{
+    return (value - from) / (to - from);
+}
+
+[numthreads(8, 8, 1)]
+void Normalize (uint3 id : SV_DispatchThreadID)
+{
+    int index = (id.y * width) + id.x;
+
+    for (int mapIndex = 0; mapIndex < mapCount; mapIndex++)
+    {
+        int indexOffset = mapIndex * width * breadth;
+
+        float minMax = minMaxValues[mapIndex];
+        float value = unlerp(-minMax, minMax, Maps[index + indexOffset]);
+
+        Maps[index + indexOffset] = value;
+    }
+}
+
+// MERGE NOISE MAPS
+
+struct SplineCondition
+{
+    float from;
+    float to;
+};
+
+StructuredBuffer<float> splinePoints;
+StructuredBuffer<SplineCondition> splineConditions;
+RWStructuredBuffer<float> Map;
+
+float evaluate(float value)
+{
+    // Get the position of the given value relative to the sampled points. 
+    float relativeValue = value * 99;
+    int index = floor(relativeValue);
+
+    float lowerValue = splinePoints[index];
+    float higherValue = splinePoints[min(99, index + 1)];
+    float valueFraction = frac(relativeValue);
+
+    // Return the point lerped between the two closest points. 
+    return lerp(lowerValue, higherValue, valueFraction);
+}
+
+[numthreads(8, 8, 1)]
+void CombineMaps (uint3 id : SV_DispatchThreadID)
+{
+    int index = (id.y * width) + id.x;
+
+    float finalValue = 0;
+    for (int mapIndex = 0; mapIndex < mapCount; mapIndex++)
+    {
+        int indexOffset = mapIndex * width * breadth;
+        int prevIndexOffset = max(0, mapIndex - 1) * width * breadth;
+
+        float from = splineConditions[mapIndex].from;
+        float to = splineConditions[mapIndex].to;
+
+        float curValue = Maps[index + indexOffset];
+        float prevValue = Maps[index + prevIndexOffset];
+        float value = (from <= prevValue && prevValue <= to) ? curValue : prevValue;
+
+        finalValue = evaluate(value);
+    }
+
+    Map[index] = finalValue;
+}
